@@ -144,7 +144,6 @@ def find_height(if_out, bds_out, gdc_out, crop_height, bds_sf):
 
             if_h += IF_ALIGN_H
 
-        if_h = find_nearest_value(estimate_if_h, finded_if_h, up_down=0)
         if finded_sf[0] == 1 or finded_sf[1] == 1:
             pipe_conf = \
               [1, bds_sf, if_w, if_h, bds_w, bds_h, gdc_out[0], gdc_out[1]]
