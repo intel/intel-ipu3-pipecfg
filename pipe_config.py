@@ -229,14 +229,15 @@ def print_param_error_info(error_type):
         print("number error, please use command like follow:")
     elif error_type == 'size':
         print("input > main > vf, please use command like follow:")
+    elif error_type == 'align':
+        print("out/vf width shoule be multiple of 64, height should be multiple of 4")
     else:
         print("%s error, please use command like follow:" % (error_type))
 
-    print("    1 stream:")
+    print("    1 output:")
     print("        python3 pipe_config.py input=3280x2464 main=320x240")
-    print("    2 stream:")
-    print("        python3 pipe_config.py input=3280x2464 \
-           main=1280x960 vf=320x240")
+    print("    2 outputs:")
+    print("        python3 pipe_config.py input=3280x2464 main=1280x960 vf=320x240")
     sys.exit()
 
 
@@ -273,12 +274,17 @@ def param_parse(params):
         out_vf = None
         if in_res[0] < out_main[0] or in_res[1] < out_main[1]:
             print_param_error_info('size')
+        if out_main[0] % 64 != 0 or out_main[1] % 4 != 0:
+            print_param_error_info('align')
     else:
         out_vf = param_check('vf', params[2])
         if in_res[0] < out_main[0] or in_res[1] < out_main[1]:
             print_param_error_info('size')
         if out_main[0] < out_vf[0] or out_main[1] < out_vf[1]:
             print_param_error_info('size')
+        if out_main[0] % 64 != 0 or out_main[1] % 4 != 0 or \
+           out_vf[0] % 64 != 0 or out_vf[1] % 4 != 0:
+            print_param_error_info('align')
 
     return in_res, out_main, out_vf
 
