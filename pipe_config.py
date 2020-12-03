@@ -125,38 +125,50 @@ def find_height(if_out, bds_out, gdc_out, crop_height, bds_sf):
         if_h = pixel_align_increase(estimate_if_h, IF_ALIGN_H)
         if LOG_DBG > 3:
             print("estimate_if_h:%f, if_h:%f" % (estimate_if_h, if_h))
-        while if_h >= min_if_h and if_h / bds_sf >= min_bds_h:
+        while if_h >= min_if_h and if_h <= if_out[1] and if_h / bds_sf >= min_bds_h:
             bds_h = if_h / bds_sf
             if bds_h % BDS_ALIGN_H == 0:
                 finded_sf[0] = 1
                 finded_if_h[0] = if_h
                 break
-
             if_h -= IF_ALIGN_H
 
         if_h = pixel_align_increase(estimate_if_h, IF_ALIGN_H)
-        while if_h <= if_out[1] and if_h / bds_sf >= min_bds_h:
+        while if_h >= min_if_h and if_h <= if_out[1] and if_h / bds_sf >= min_bds_h:
             bds_h = if_h / bds_sf
             if bds_h % BDS_ALIGN_H == 0:
                 finded_sf[1] = 1
                 finded_if_h[1] = if_h
                 break
-
             if_h += IF_ALIGN_H
+
+        if finded_sf[0] == 1:
+            if_h = finded_if_h[0]
+
+        if finded_sf[1] == 1:
+            if_h = finded_if_h[1]
 
         if finded_sf[0] == 1 or finded_sf[1] == 1:
             pipe_conf = \
               [1, bds_sf, if_w, if_h, bds_w, bds_h, gdc_out[0], gdc_out[1]]
+            if LOG_DBG > 1:
+                print("IF: %dx%d BDS:%dx%d GDC:%dx%d" % (if_w, if_h, bds_w, bds_h, \
+                                                         gdc_out[0], gdc_out[1]))
             PIPE_CONFIGS.append(pipe_conf)
 
 
 def find_bds_sf(if_out, gdc_out, crop_height, sf_step, bds_sf):
     '''base on if_w, find a bds_sf, ensure  bds_w is integer'''
     if_w = if_out[0]
-    min_bds_w = gdc_out[0] + FILTER_H * 2
+    if_h = if_out[1]
+    min_bds_w = gdc_out[0] + FILTER_W * 2
+    min_bds_h = gdc_out[1] + FILTER_H * 2
     while BDS_SF_MAX >= bds_sf >= BDS_SF_MIN:
         bds_w = if_w / bds_sf
-        if bds_w % BDS_ALIGN_W == 0 and bds_w >= min_bds_w:
+        bds_h = if_h / bds_sf
+
+        if bds_w % BDS_ALIGN_W == 0 and bds_w >= min_bds_w and \
+           bds_h % BDS_ALIGN_H == 0 and bds_h >= min_bds_h:
             bds_out = [bds_w, 0]
             find_height(if_out, bds_out, gdc_out, crop_height, bds_sf)
         bds_sf += sf_step
@@ -168,13 +180,27 @@ def find_available_config(ipu_in, gdc_out, crop_height, sf_step):
     base_bds_sf = find_nearest_value(esti_bds_sf, BDS_SF_LIST, -1)
 
     if_w = pixel_align_increase(ipu_in[0], IF_ALIGN_W)
-    if_h = ipu_in[1]
+    if_h = pixel_align_increase(ipu_in[1], IF_ALIGN_H)
     min_if_w = ipu_in[0] - IF_CROP_MAX_W
-    while if_w >= min_if_w:
-        if_output = [if_w, if_h]
-        find_bds_sf(if_output, gdc_out, crop_height, sf_step, base_bds_sf)
+    min_if_h = ipu_in[1] - IF_CROP_MAX_H
+    while if_w >= min_if_w :
+        while if_h >= min_if_h :
+            if_output = [if_w, if_h]
+            find_bds_sf(if_output, gdc_out, crop_height, sf_step, base_bds_sf)
+            if_h -= IF_ALIGN_H
         if_w -= IF_ALIGN_W
 
+    if_w = pixel_align_increase(ipu_in[0], IF_ALIGN_W)
+    if_h = pixel_align_increase(ipu_in[1], IF_ALIGN_H)
+    min_if_w = ipu_in[0] - IF_CROP_MAX_W
+    min_if_h = ipu_in[1] - IF_CROP_MAX_H
+
+    while if_h >= min_if_h :
+        while if_w >= min_if_w :
+            if_output = [if_w, if_h]
+            find_bds_sf(if_output, gdc_out, crop_height, sf_step, base_bds_sf)
+            if_w -= IF_ALIGN_W
+        if_h -= IF_ALIGN_H
 
 def calc_fov(input_res, pipe_conf):
     '''calc fov'''
