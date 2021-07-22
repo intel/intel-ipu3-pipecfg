@@ -31,6 +31,7 @@ YUV_SF_MAX = 16
 YUV_SF_MIN = 1
 YUV_SF_STEP = 1/4
 
+YUV_MAX_SCALE = 12
 PIPE_CONFIGS = []
 
 
@@ -328,7 +329,12 @@ def calc_gdc_out(ipu_in, out_main, out_vf):
     if out_vf is not None:
         gdc_w = out_main[0]
         gdc_h = max(out_main[1], out_main[0] * out_vf[1] / out_vf[0])
+        gdc_h = min(gdc_h, out_vf[1] * YUV_MAX_SCALE)
+        gdc_w = min(gdc_w, out_vf[0] * YUV_MAX_SCALE)
         gdc_out = [gdc_w, gdc_h]
+        if gdc_w < out_main[0] or gdc_h < out_main[1]:
+            print("Not supported parameters due to HW limitation")
+            exit()
     else:
         if is_diff_ratio(ipu_in, out_main):
             gdc_out = out_main
